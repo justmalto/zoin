@@ -1,0 +1,18 @@
+.navbar{
+    height: 8vh;
+    background-color: black;
+    width: 100%;
+    place-items: center;
+    align-content: center;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+.pfp-icon{
+    height:6vh;
+    width: 6vh;
+    padding-left: 50px;
+    align-self: center;
+    
+}

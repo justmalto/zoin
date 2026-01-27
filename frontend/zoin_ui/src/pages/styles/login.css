@@ -1,0 +1,74 @@
+.login-identifier{
+    font-family: "KyivTypeSans";
+}
+
+.login-password{
+    font-family:"KyivTypeSans";
+}
+ 
+/* full-page centering */
+.auth-form {
+  height: 100%;
+  width: 100%;
+  padding-top: 10%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+/* inner form layout */
+.auth-form > h2,
+.auth-form > .form,
+.auth-form > button {
+  width: min(320px, 90vw);
+}
+
+/* LOGIN title */
+.login-font {
+  font-size: clamp(24px, 5vw, 36px);
+  font-weight: 300;
+  letter-spacing: 6px;
+  margin-bottom: 20px;
+}
+
+/* inputs stack */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.form input {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  color: #eaeaea;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+.form input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* button */
+.auth-form button {
+  padding: 10px;
+  border-radius: 20px;
+  border: none;
+  background: #0f0f0f;
+  color: #fff;
+  font-weight: 400;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.auth-form p span {
+  cursor: pointer;
+  color: #3ccf91;
+  pointer-events: auto;
+}
+
+.auth-form p span:hover {
+  text-decoration: underline;
+}

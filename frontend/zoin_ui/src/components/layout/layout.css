@@ -1,0 +1,30 @@
+.app-layout {
+  width: 100%;
+
+  /* Responsive height handling */  /* safe viewport height */
+  min-height: 100dvh;   /* dynamic viewport height */
+
+  position: relative;
+  overflow: hidden;
+
+  background: #1e1e1e;
+}
+
+
+/* subtle brand watermark */
+/* .app-layout::after {
+  content: "zoin";
+  position: absolute;
+  bottom: -80px;
+  right: -30px;
+  font-size: 270px;
+  font-weight: 300;
+  letter-spacing: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  user-select: none;
+} */
+
+.layout-content{
+    height: 100%;
+}

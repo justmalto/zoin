@@ -1,0 +1,14 @@
+.identifier{
+    display: grid;
+    height: 100vh;
+    /* background-color: aliceblue; */
+    grid-template-columns: 70% 30%;
+    /* filter: 20px; */
+}
+.left-identifier{
+    padding-top: 5%;
+}
+
+.pfp{
+    padding-top: 5%;
+}
