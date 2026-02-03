@@ -25,7 +25,7 @@ function Login() {
             </h2>
             <div className="form">
             <input
-            placeholder="email or username" className="form-identifier"
+            placeholder="email" className="form-identifier"
             value={identifier}
             onChange={(e)=>setIdentifier(e.target.value)}
             />

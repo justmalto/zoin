@@ -3,7 +3,7 @@ import "./styles/register.css";
 import { useNavigate } from "react-router-dom";
 
 function Register() {
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,10 +31,12 @@ function Register() {
       <h2 className="login-font">REGISTER</h2>
 
       <div className="form">
+
         <input
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+        type ="name"
+        placeholder="Name"
+        value={name}
+        onChange={(e)=> setName(e.target.value)}
         />
 
         <input
