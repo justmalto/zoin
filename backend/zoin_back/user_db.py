@@ -28,6 +28,14 @@ class User(Base):
         nullable=False
 
     )
-    Name = Column( String(255),nullable=False)
+    name = Column( String(255),nullable=False)
     email = Column (String(255), unique=True,nullable=False)
     hashed_password=Column(String, nullable=False)
+
+
+def get_db():
+    db=SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
