@@ -39,13 +39,20 @@ class LoginRequest(BaseModel):
     email:EmailStr
     password:str
 
+class RegisterResponse(BaseModel):
+    message:str
+    user_id:str
+
+class LoginResponse(BaseModel):
+    access_token:str
+    token_type:str
 
 router = APIRouter(
     prefix='/auth',
     tags=["Authentication"]
 )
 
-@router.post("/register", status_code=201)
+@router.post("/register", status_code=201, response_model=RegisterResponse)
 def register(data: RegisterRequest, db: Session =Depends(get_db)):
     if db.query(User).filter(User.email ==data.email).first():
         raise HTTPException(400, "Email already registered")
@@ -65,7 +72,7 @@ def register(data: RegisterRequest, db: Session =Depends(get_db)):
         "user_id":str(user.id)
     }
 
-@router.post("/login")
+@router.post("/login",response_model=LoginResponse)
 def login(data:LoginRequest ,db:Session =Depends(get_db)):
     user= db.query(User).filter(User.email==data.email).first()
     if not user or not verify_password(data.password, user.hashed_password):
