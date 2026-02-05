@@ -3,19 +3,38 @@ import "./styles/login.css"
 import { useNavigate } from "react-router-dom";
 
 function Login() {
-    const [identifier, setIdentifier] =useState("")
+    const [email, setEmail] =useState("")
     const [password,setPassword] = useState("")
     const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async(e) => {
         e.preventDefault()
 
-        const payload ={
-            identifier,
-            password
-        }
+        try{
+            const response = await fetch("http://localhost:8000/auth/login",{
+                method:" POST",
+                headers: {
+                    "Content-Type":"application/json",
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                })
+            });
 
-        console.log(payload)
+            if (!response.ok){
+                throw new Error("Invalid Credentials");
+            }
+
+            const data= await response.json
+
+            localStorage.setItem("token", data.access_token );
+
+            navigate("/home")
+        }
+        catch (error) {
+            alert("Login failed. Check Email or Password.")
+        }
     }
 
     return(
@@ -26,8 +45,8 @@ function Login() {
             <div className="form">
             <input
             placeholder="email" className="form-identifier"
-            value={identifier}
-            onChange={(e)=>setIdentifier(e.target.value)}
+            value={email}
+            onChange={(e)=>setEmail(e.target.value)}
             />
 
             <input type="password" className="form-pass"

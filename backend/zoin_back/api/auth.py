@@ -30,6 +30,10 @@ def create_access_token(user_id):
 
     return jwt.encode(payload,SECRET_KEY, algorithm=ALGORITHM)
 
+def get_current_user():
+    pass
+
+
 class RegisterRequest(BaseModel):
     name:str
     email:str
@@ -85,4 +89,6 @@ def login(data:LoginRequest ,db:Session =Depends(get_db)):
         "access_token":token,
         "token_type":"bearer"
     }
-
+@router.post("/me")
+def me(user = Depends(get_current_user)):
+    return user
