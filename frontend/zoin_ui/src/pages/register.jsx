@@ -9,21 +9,45 @@ function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // 🔐 Frontend validation
     if (password !== confirmPassword) {
       alert("Passwords do not match");
       return;
     }
 
-    const payload = {
-      username,
-      email,
-      password
-    };
+    try {
+      const response = await fetch(
+        "http://localhost:8000/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            password,
+          }),
+        }
+      );
 
-    console.log(payload);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || "Registration failed");
+      }
+
+      // We don't actually need the response body
+      await response.json();
+
+      alert("Registration successful! Please login.");
+      navigate("/login");
+
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
   return (
@@ -31,12 +55,11 @@ function Register() {
       <h2 className="login-font">REGISTER</h2>
 
       <div className="form">
-
         <input
-        type ="name"
-        placeholder="Name"
-        value={name}
-        onChange={(e)=> setName(e.target.value)}
+          type="text"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
 
         <input
@@ -62,8 +85,12 @@ function Register() {
       </div>
 
       <button type="submit">sign up</button>
+
       <p>
-        Already have an account? <span onClick={() => navigate("/login")}>LOGIN</span>
+        Already have an account?{" "}
+        <span onClick={() => navigate("/login")}>
+          LOGIN
+        </span>
       </p>
     </form>
   );
