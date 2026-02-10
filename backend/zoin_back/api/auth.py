@@ -12,7 +12,7 @@ ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 150
 
 pwd_context= CryptContext(
-    schemes=["bcrypt"],
+    schemes=["argon2"],
     deprecated="auto"
 )
 

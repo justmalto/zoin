@@ -11,8 +11,9 @@ function Login() {
         e.preventDefault()
 
         try{
+            console.log("Sending login request")
             const response = await fetch("http://localhost:8000/auth/login",{
-                method:" POST",
+                method: "POST",
                 headers: {
                     "Content-Type":"application/json",
                 },
@@ -26,7 +27,8 @@ function Login() {
                 throw new Error("Invalid Credentials");
             }
 
-            const data= await response.json
+            console.log("Response Received")
+            const data= await response.json();
 
             localStorage.setItem("token", data.access_token );
 
