@@ -1,0 +1,7 @@
+{
+  "project_ref": "fsvhekfynvcoawrgkqlc",
+  "minimum_password_length": 12,
+  "required_classes": ["lowercase", "uppercase", "digit", "symbol"],
+  "confirm_email": true,
+  "note": "Recorded dashboard policy; not an automatically applied configuration file."
+}

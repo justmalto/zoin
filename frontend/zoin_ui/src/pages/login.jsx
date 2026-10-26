@@ -1,78 +1,26 @@
-import React, {useState, useEffect} from "react";
-import "./styles/login.css"
-import { useNavigate } from "react-router-dom";
-
-function Login() {
-    const [email, setEmail] =useState("")
-    const [password,setPassword] = useState("")
-    const navigate = useNavigate();
-
-    const handleSubmit = async(e) => {
-        e.preventDefault()
-
-        try{
-            console.log("Sending login request")
-            const response = await fetch("http://localhost:8000/auth/login",{
-                method: "POST",
-                headers: {
-                    "Content-Type":"application/json",
-                },
-                body: JSON.stringify({
-                    email,
-                    password,
-                })
-            });
-
-            if (!response.ok){
-                throw new Error("Invalid Credentials");
-            }
-
-            console.log("Response Received")
-            const data= await response.json();
-
-            localStorage.setItem("token", data.access_token );
-
-            navigate("/home")
-        }
-        catch (error) {
-            alert("Login failed. Check Email or Password.")
-        }
-    }
-
-    return(
-        <form className="auth-form" onSubmit={handleSubmit}>
-            <h2 className="login-font">
-                LOGIN
-            </h2>
-            <div className="form">
-            <input
-            placeholder="email" className="form-identifier"
-            value={email}
-            onChange={(e)=>setEmail(e.target.value)}
-            />
-
-            <input type="password" className="form-pass"
-            placeholder="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            />
-
-            </div>
-            <button type="submit">sign in</button>
-
-            <p>
-                Don't have an account? <span onClick={() => { navigate("/register");
-                    console.log("Register Clicked");
-                 }}>
-                REGISTER</span>
-            </p>
-
-
-        </form>
-    )
-
-
-
+import { useState } from 'react'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient'
+import { useSession } from '../lib/session'
+export default function Login() {
+  const { user, loading } = useSession(), location = useLocation()
+  const [error, setError] = useState(''), [busy, setBusy] = useState(false)
+  if (user && !loading) return <Navigate to={location.state?.from?.startsWith('/jobs/') ? location.state.from : '/home'} replace />
+  async function submit(event) {
+    event.preventDefault(); setError(''); setBusy(true)
+    const fields = new FormData(event.currentTarget)
+    try {
+      const { error: failure } = await supabase.auth.signInWithPassword({ email: fields.get('email'), password: fields.get('password') })
+      if (failure) throw failure
+    } catch (failure) { setError(failure.message || 'Unable to sign in. Please retry.') }
+    finally { setBusy(false) }
+  }
+  return <main className="auth-screen"><form className="auth-box" onSubmit={submit}>
+    <h1>LOGIN</h1><p className="auth-lead">Your applications, all in one place.</p>
+    <label>Email<input name="email" type="email" defaultValue={location.state?.email || ''} autoComplete="email" placeholder="you@example.com" required disabled={busy} /></label>
+    <label>Password<input name="password" type="password" autoComplete="current-password" placeholder="Enter your password" required disabled={busy} /></label>
+    {error && <p className="inline-message" role="alert">{error}</p>}
+    <button className="save" disabled={busy || loading}>{busy ? 'Signing in…' : 'Sign In'}</button>
+    <p className="auth-links">Don&apos;t have an account? <Link to="/register">REGISTER</Link></p>
+  </form></main>
 }
-
-export default Login;

@@ -1,19 +1,12 @@
-import React, {useEffect,useState} from "react";
-import "./styles/navbar.css"
-import setting from "../assets/Setting.webp"
-import profile from "../assets/profilep.png"
-import { useNavigate } from "react-router-dom";
-
-
-function Navbar() {
-    const navigate = useNavigate();
-    return(
-        <div className="navbar">
-            <div>
-                <img src={profile} className="pfp-icon" onClick={()=> navigate("/profile")}/>
-            </div>
-        </div>
-    )
+import { Link } from 'react-router-dom'
+import { useSession } from '../lib/session'
+import placeholder from '../assets/profilep.png'
+export default function Navbar({ theme, toggleTheme }) {
+  const { user, profile } = useSession()
+  return <header className="app-header">
+    {user ? <Link className="profile" to="/profile" aria-label="Open profile"><img src={profile?.avatar_url || placeholder} alt="" /></Link> : <span />}
+    <div className="header-end"><Link className="brand brand-link" to={user ? '/home' : '/login'}>zoin</Link>
+      <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>{theme === 'light' ? 'Dark mode' : 'Light mode'}</button>
+    </div>
+  </header>
 }
-
-export default Navbar;

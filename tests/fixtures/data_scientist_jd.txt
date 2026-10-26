@@ -1,0 +1,44 @@
+The Data Scientist supports the Data & Analytics team by identifying business needs, building analytical models and tools, and developing test strategies. The role contributes to the delivery of business outcomes by supporting Senior Analysts and Lead Analysts in executing data science initiatives. The analyst is expected to apply AI/ML techniques, design models, and contribute to continuous improvement efforts across the organization.
+
+Key Responsibilities
+Primary Responsibilities
+- Identify and scope business requirements and priorities through rigorous analysis and stakeholder engagement.
+- Design analytical models to address current and future business needs.
+- Demonstrate a solid understanding of data structures and fields required for analysis.
+- Apply advanced AI/ML techniques to solve problems related to customer segmentation, risk modelling, campaign targeting, and more.
+- Develop test strategies and systematic procedures to validate model performance and accuracy.
+- Perform feature engineering through extracting meaningful features from measured and/or derived data.
+- Perform data cleansing, merging, enrichment, and transformation to prepare high-quality datasets for modelling.
+- Analyze large datasets to identify trends, patterns, and opportunities for business growth.
+- Build recommendation engines and propensity models to support cross-sell and up-sell strategies.
+- Validate models to ensure accuracy, stability, and compliance with regulatory guidelines.
+- Present complex model outputs and insights in a clear, business-friendly manner.
+- Build Stochastic and Machine learning algorithms that potentially address business problems.
+- Select and apply algorithms and advanced computational methods to enable systems to learn, adapt, and deliver desired outcomes.
+- transparency.
+
+Secondary Responsibilities
+- Design and create campaign strategies independently based on model outputs.
+- Track and evaluate model performance against business expectations.
+- Identify opportunities for innovation and optimization using advanced data science techniques.
+
+What We Are Looking For
+Education
+- Bachelor's or master's degree in Data Science, Computer Science, Statistics, Economics or a related field.
+Experience
+- 2+ years of Proven experience in building and deploying machine learning models.
+- Hands-on experience with MLOps tools and frameworks.
+- Experience in API development and scalable model integration.
+Skills and Attributes
+- Strong programming skills in Python or PySpark.
+- Proficiency in data manipulation, feature engineering, and model evaluation.
+- Familiarity with cloud platforms and deployment pipelines.
+- Ability to work independently and collaboratively in cross-functional teams.
+- Strong problem-solving and analytical thinking.
+- Excellent communication and documentation skills.
+
+Key Success Metrics
+- Development and deployment of high-quality models and tools.
+- Alignment of model outputs with business objectives.
+- Independent design and execution of campaign strategies.
+- Consistent tracking and optimization of model performance.

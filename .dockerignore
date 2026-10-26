@@ -1,0 +1,10 @@
+# Allowlist: credentials, git history, uploads, frontend and local venvs never enter the build context.
+**
+!Dockerfile
+!requirements.lock.txt
+!app/
+!app/**
+!scripts/
+!scripts/start_backend.py
+**/__pycache__
+**/*.pyc
