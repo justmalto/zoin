@@ -5,11 +5,12 @@ from fastapi import APIRouter, Request, File, Form, UploadFile
 from core.auth import CurrentUser
 from core.exceptions import not_found
 from core.supabase import user_client
-from schemas.ai import JobExtractRequest, ResumeMatchRequest, MailSearchRequest
+from schemas.ai import JobLinkRequest, JobExtractRequest, ResumeMatchRequest, MailSearchRequest
 from services.mail_workflow import run_mail_workflow
 from services.groq_client import AIError
 from services.imap_client import ImapError
 from services.job_extractor import extract_job
+from services.job_link import import_job_link
 from services.recommendation_service import match_resume
 from services.resume_upload import read_resume
 from services.mail_receipts import apply_received_mail
@@ -21,6 +22,11 @@ router = APIRouter(tags=["analysis"])
 def extract_job_details(payload: JobExtractRequest, user_id: CurrentUser):
     """Extract from pasted text; never fetch an arbitrary client URL."""
     return extract_job(payload.text)
+
+
+@router.post('/analysis/job-link')
+def extract_job_link(payload: JobLinkRequest, user_id: CurrentUser):
+    return import_job_link(payload.url)
 
 
 @router.post('/analysis/resume-match')

@@ -21,13 +21,15 @@ export default function JobDetails({ modal = false }) {
 function JobForm({ job, modal, onClose }) {
   const [currentJob, setCurrentJob] = useState(job)
   const [editing, setEditing] = useState(!job)
-  const [draft, setDraft] = useState(() => ({ company: job?.company || '', job_title: job?.job_title || '', job_description: job?.job_description || '', job_id: job?.job_id || '', submitted_date: job?.submitted_at?.slice(0, 10) || '', selected_resume_id: job?.selected_resume_id ?? null, initial_status: 'found', location: job?.location || '' }))
+  const [draft, setDraft] = useState(() => ({ company: job?.company || '', job_title: job?.job_title || '', job_description: job?.job_description || '', job_id: job?.job_id || '', submitted_date: job?.submitted_at?.slice(0, 10) || '', selected_resume_id: job?.selected_resume_id ?? null, initial_status: 'found', location: job?.location || '', application_url: job?.application_url || '', job_type: job?.job_type || '' }))
   const [matchFailure, setMatchFailure] = useState(null), [matchStarted, setMatchStarted] = useState(0), [retryAt, setRetryAt] = useState(null)
   const [replaceResumeId, setReplaceResumeId] = useState('')
   const [file, setFile] = useState(null), [busy, setBusy] = useState(''), [error, setError] = useState('')
   const [message, setMessage] = useState(''), [analysis, setAnalysis] = useState(null), [nextStatus, setNextStatus] = useState('')
   const resumes = useResource('/resumes'), recs = useResource(job ? `/applications/${job.id}/recommendations` : null), timeline = useResource(job ? `/applications/${job.id}/timeline` : null)
-  const dialog = useRef(null), form = useRef(null)
+  const dialog = useRef(null), form = useRef(null), importRequest = useRef(null)
+  const [replaceImported, setReplaceImported] = useState(false)
+  useEffect(() => () => importRequest.current?.abort(), [])
   const [search, setSearch] = useSearchParams(), location = useLocation()
   const expanded = !modal || search.get('view') === 'full'
   const selectedResume = draft.selected_resume_id ?? ((!job ? resumes.data?.find(r => r.is_active)?.id : '') || '')
@@ -55,11 +57,46 @@ function JobForm({ job, modal, onClose }) {
       let resumeId = selectedResume
       // A temporary file never enters Storage or the library implicitly.
       if (file) resumeId = ''
-      const body = { company: draft.company, job_title: draft.job_title, job_description: draft.job_description, job_id: draft.job_id || null, submitted_at: draft.submitted_date ? new Date(`${draft.submitted_date}T00:00:00Z`).toISOString() : null, selected_resume_id: resumeId || null, location: draft.location || null }
+      const body = { company: draft.company, job_title: draft.job_title, job_description: draft.job_description, job_id: draft.job_id || null, submitted_at: draft.submitted_date ? new Date(`${draft.submitted_date}T00:00:00Z`).toISOString() : null, selected_resume_id: resumeId || null, location: draft.location || null, application_url: draft.application_url || null, job_type: draft.job_type || null }
       if (!job) body.initial_status = draft.initial_status
       await api(job ? `/applications/${job.id}` : '/applications', { method: job ? 'PATCH' : 'POST', body })
       onClose()
     })
+  }
+  async function importLink(url = draft.application_url) {
+    if (importRequest.current || busy) return
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol !== 'https:' || parsed.username || parsed.password) throw new Error()
+    } catch { setError('Enter a valid HTTPS job-posting link.'); return }
+    const controller = new AbortController()
+    importRequest.current = controller
+    setBusy('importing'); setError(''); setMessage('')
+    try {
+      const data = await api('/analysis/job-link', { method: 'POST', body: { url }, signal: controller.signal })
+      if (controller.signal.aborted) return
+      setDraft(old => {
+        const next = { ...old, application_url: url }
+        for (const [field, value] of Object.entries({ company: data.company, job_title: data.job_title, job_id: data.job_id, location: data.location, job_type: data.employment_type, job_description: data.job_description })) {
+          if (value && (replaceImported || !old[field]?.trim())) next[field] = value
+        }
+        return next
+      })
+      setAnalysis(null); setMatchFailure(null); setRetryAt(null)
+      setMessage(`Job posting imported. ${replaceImported ? 'Existing job details were replaced where data was found.' : 'Only empty fields were filled; your existing details were preserved.'} ${(data.warnings || []).join(' ')}`)
+    } catch (failure) {
+      if (!controller.signal.aborted) setError(failure.message)
+    } finally {
+      if (!controller.signal.aborted) setBusy('')
+      if (importRequest.current === controller) importRequest.current = null
+    }
+  }
+  function pasteLink(event) {
+    const url = event.clipboardData.getData('text').trim()
+    if (!/^https:\/\//i.test(url)) return
+    event.preventDefault()
+    setDraft(old => ({ ...old, application_url: url }))
+    void importLink(url)
   }
   async function extract() {
     if (draft.job_description.trim().length < 20) { setError('Paste at least 20 characters of the job description first.'); return }
@@ -129,9 +166,17 @@ function JobForm({ job, modal, onClose }) {
     </div></div>
     <div className="fields">
       {(error || message) && <div className="wide"><p className="inline-message" role={error ? 'alert' : 'status'}>{error || message}</p></div>}
+      <div className="wide">
+        <div className="sectionhead"><label htmlFor="job-posting-link">Job posting link</label>{editing && <button type="button" disabled={!!busy || !draft.application_url.trim()} onClick={() => importLink()}>{busy === 'importing' ? 'Importing…' : 'Autofill from link'}</button>}</div>
+        <input id="job-posting-link" type="url" name="application_url" value={draft.application_url} onChange={change} onPaste={editing ? pasteLink : undefined} readOnly={readOnly} disabled={!!busy} maxLength={2000} placeholder="https://company.com/careers/job" aria-describedby="job-link-help" />
+        {editing && <><p id="job-link-help" className="small">Paste a link to autofill, or enter it and select Autofill from link. Review the result before saving. Some sites block access; you can always paste the description below.</p><label className="small sync-toggle"><input type="checkbox" checked={replaceImported} disabled={!!busy} onChange={event => setReplaceImported(event.target.checked)} /> Replace existing job details when importing</label></>}
+        {busy === 'importing' && <p role="status">Reading job posting… Usually 5–30 seconds; complex pages may take longer.</p>}
+      </div>
       <label>Job Role *<input name="job_title" value={draft.job_title} onChange={change} readOnly={readOnly} disabled={!!busy} maxLength={300} required autoFocus={editing} /></label>
       <label>Company Name *<input name="company" value={draft.company} onChange={change} readOnly={readOnly} disabled={!!busy} maxLength={300} required /></label>
       <div className="wide"><div className="sectionhead"><label htmlFor="job-description">Job Description *</label>{editing && <button type="button" disabled={!!busy} onClick={extract}>{busy === 'extracting' ? 'Extracting…' : 'Extract details'}</button>}</div><textarea id="job-description" name="job_description" value={draft.job_description} onChange={change} readOnly={readOnly} disabled={!!busy} minLength={20} maxLength={18000} required rows={6} placeholder="Paste the job description" /></div>
+      <label>Location<input name="location" value={draft.location} onChange={change} readOnly={readOnly} disabled={!!busy} maxLength={300} /></label>
+      <label>Employment type<input name="job_type" value={draft.job_type} onChange={change} readOnly={readOnly} disabled={!!busy} maxLength={100} placeholder="Optional" /></label>
       <label>Submission date (optional)<input type="date" name="submitted_date" value={draft.submitted_date} onChange={change} readOnly={readOnly} disabled={!!busy} /></label>
       <label>Job ID<input name="job_id" value={draft.job_id} onChange={change} readOnly={readOnly} disabled={!!busy} maxLength={300} placeholder="Optional" /></label>
       {!job && <p className="wide small">New jobs start as Found. Applied is set automatically only when a matching application-received email is confirmed during Gmail search.</p>}

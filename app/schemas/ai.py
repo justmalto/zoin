@@ -90,3 +90,7 @@ class MailSearchRequest(StrictModel):
     before_uid: int | None = Field(default=None, ge=1)
     after_uid: int = Field(default=0, ge=0)
     limit: int = Field(default=5, ge=1, le=5)
+
+
+class JobLinkRequest(StrictModel):
+    url: str = Field(min_length=1, max_length=2000)
