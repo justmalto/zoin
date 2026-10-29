@@ -1,6 +1,36 @@
 """Automatic personal tracker updates only for explicit, identity-matched receipts."""
 import re
+from datetime import datetime, timedelta
+from email.utils import parseaddr
+from urllib.parse import urlsplit
 from services.mail_workflow import normalized
+
+def company_receipt_scope(application, match):
+    """Only worker-supplied ownership/ambiguity context can enable role-less receipts."""
+    if application.get('receipt_company_candidates') != 1 or not application.get('submitted_at'):
+        return False
+    if match.get('job_id') or match.get('job_title'):
+        return False  # An explicitly different role/ID cannot use the generic fallback.
+    try:
+        host = (urlsplit(application.get('application_url') or '').hostname or '').casefold()
+    except ValueError:
+        return False
+    host = re.sub(r'^(?:www|careers|jobs|apply)\.', '', host)
+    sender = parseaddr(match.get('sender') or '')[1].rpartition('@')[2].casefold()
+    if not host or host in ('greenhouse.io', 'lever.co', 'linkedin.com', 'peoplestrong.com') or any(host.endswith('.' + shared) for shared in ('greenhouse.io', 'lever.co', 'linkedin.com', 'peoplestrong.com')):
+        return False
+    if sender != host:
+        return False
+    if not isinstance(match.get('received_at'), str):
+        return False
+    try:
+        submitted = datetime.fromisoformat(application['submitted_at'].replace('Z', '+00:00'))
+        received = datetime.fromisoformat(match['received_at'].replace('Z', '+00:00'))
+        if submitted.tzinfo is None or received.tzinfo is None:
+            return False
+        return submitted - timedelta(minutes=15) <= received <= submitted + timedelta(days=7)
+    except (KeyError, TypeError, ValueError):
+        return False
 
 def receipt_matches_job(application,match):
     if match.get('category')!='confirmation' or match.get('suggested_status')!='applied' or match.get('confidence',0)<0.9 or not match.get('evidence'):
@@ -15,9 +45,30 @@ def receipt_matches_job(application,match):
     actual=normalized(match.get('job_id') or '')
     if expected and actual:
         return expected==actual
-    return (bool(match.get('company')) and bool(match.get('job_title')) and
-            normalized(match['company'])==normalized(application.get('company') or '') and
-            normalized(match['job_title'])==normalized(application.get('job_title') or ''))
+    company_matches = bool(match.get('company')) and normalized(match['company']) == normalized(application.get('company') or '')
+    return company_matches and ((bool(match.get('job_title')) and
+            normalized(match['job_title']) == normalized(application.get('job_title') or '')) or company_receipt_scope(application, match))
+
+
+def explicit_receipts(application, messages):
+    """Extract literal, unambiguous receipts without spending an AI quota."""
+    results = []
+    for message in messages:
+        text = '\n'.join(message.get(k, '') for k in ('subject', 'body_text'))
+        def quote(value):
+            if not value: return None
+            found = re.search(r'(?<!\w)' + re.escape(value) + r'(?!\w)', text, re.I)
+            return found.group() if found else None
+        match = {'message_uid': message['uid'], 'message_id': message.get('message_id', ''),
+            'sender': message.get('sender', ''), 'subject': message.get('subject', ''),
+            'received_at': message.get('received_at'), 'category': 'confirmation',
+            'suggested_status': 'applied', 'confidence': 1.0, 'company': quote(application.get('company')),
+            'job_title': quote(application.get('job_title')), 'job_id': quote(application.get('job_id')),
+            'evidence': [line.strip() for line in text.splitlines() if line.strip()],
+            'reason': 'Explicit receipt with verified tracked-job identity.', 'review_required': True,
+            'interview_details': None, 'deadline_text': None}
+        if receipt_matches_job(application, match): results.append(match)
+    return results
 
 def apply_received_mail(database,application,matches):
     updates=0; current=application

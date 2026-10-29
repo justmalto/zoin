@@ -271,7 +271,13 @@ def fetch_job_messages(email_address, app_password, application, *, before_uid=N
             parts = [part[1] for part in (raw or []) if isinstance(part,tuple) and isinstance(part[1],bytes)]
             if status != 'OK' or not parts: raise ImapError('Incomplete job email batch; retry this page')
             parsed = email.message_from_bytes(parts[0])
+            try:
+                stamp = email.utils.parsedate_to_datetime(parsed.get('Date', ''))
+                received_at = stamp.isoformat() if stamp.tzinfo is not None else None
+            except (ValueError, TypeError, IndexError):
+                received_at = None
             messages.append({'uid':uid, 'message_id':str(parsed.get('Message-ID',''))[:500],
+                             'received_at':received_at,
                              'sender':_decode_header(parsed.get('From',''))[:500],
                              'subject':_decode_header(parsed.get('Subject',''))[:500],
                              'body_text':_extract_body(parsed)[:8000]})

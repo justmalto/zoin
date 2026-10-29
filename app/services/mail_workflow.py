@@ -51,9 +51,12 @@ def run_mail_workflow(application, email_address, password, *, before_uid=None, 
         candidates = shortlist(state['application'], state['messages'])
         return {'candidates':candidates, 'steps':state['steps'] + [{'stage':'identity_filter', 'count':len(candidates)}]}
     def classify(state):
-        matches = match_mail_for_job(state['application'], state['candidates'])
+        from services.mail_receipts import explicit_receipts
+        receipts = explicit_receipts(state['application'], state['candidates'])
+        # Confirm Found first. Other lifecycle suggestions can be read on the next sync.
+        matches = receipts if receipts and state['application'].get('status') == 'found' else match_mail_for_job(state['application'], state['candidates'])
         by_uid={m['uid']:m for m in state['candidates']}
-        matches=[m | {'message_id':by_uid[m['message_uid']].get('message_id',''), 'sender':by_uid[m['message_uid']].get('sender','')[:300], 'subject':by_uid[m['message_uid']].get('subject','')[:500]} for m in matches]
+        matches=[m | {'message_id':by_uid[m['message_uid']].get('message_id',''), 'received_at':by_uid[m['message_uid']].get('received_at'), 'sender':by_uid[m['message_uid']].get('sender','')[:300], 'subject':by_uid[m['message_uid']].get('subject','')[:500]} for m in matches]
         return {'matches':matches, 'steps':state['steps'] + [{'stage':'groq_classify_and_validate_evidence', 'count':len(matches)}]}
     def review(state):
         matches = state.get('matches', [])
