@@ -1,3 +1,5 @@
+> Release configuration: the production Docker image now includes pinned Playwright/Chromium. Run one backend worker and mount durable storage at `/data`; the database and its adjacent encryption key must survive container replacements together. Real-site submissions remain off by default. Scheduled discovery can run on the server, but submission still requires a valid signed-in session lease (up to one hour); this is not an indefinitely unattended apply service. Older local-only notes below describe earlier stages.
+
 > Current build: public job-link inspection and limited real hosted-form submission are implemented. Real-site submission is opt-in. Earlier mock-only sections document the baseline; see “Real application links” below for current behavior.
 
 # Local résumé-driven agent

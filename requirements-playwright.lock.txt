@@ -1,4 +1,4 @@
-# Optional local browser adapter; core production image does not install this file.
+# Browser adapter dependencies, shared by local setup and the production image.
 playwright==1.64.1
 pyee==14.0.0
 greenlet==3.5.6

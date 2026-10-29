@@ -2,6 +2,7 @@
 **
 !Dockerfile
 !requirements.lock.txt
+!requirements-playwright.lock.txt
 !app/
 !app/**
 !scripts/
