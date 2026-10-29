@@ -4,7 +4,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
     ZOIN_ENVIRONMENT=production \
-    MAIL_SCHEDULER_ENABLED=true
+    MAIL_SCHEDULER_ENABLED=true \
+    ALLOWED_ORIGINS='["https://zoin-three.vercel.app"]'
 
 WORKDIR /app
 RUN python -m venv /opt/venv

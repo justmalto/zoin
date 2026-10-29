@@ -66,3 +66,6 @@ backups/
 /frontend/zoin_ui/src/assets/pfp.webp
 /frontend/zoin_ui/src/assets/react.svg
 /frontend/zoin_ui/public/vite.svg
+
+# Project-local optional browser binaries and discovery runtime data
+.local/

@@ -44,7 +44,22 @@ def list_applications(
     names = {r["id"]: r["file_name"] for r in resumes}
     recommendations = database.table("resume_recommendations").select("application_id,resume_id,match_score").eq("user_id", user_id).execute().data
     scores = {(r["application_id"],r["resume_id"]): r["match_score"] for r in recommendations}
-    return [row | {"resume_name": names.get(row["selected_resume_id"]),
+    followup_preferences = {}
+    questions_by_application = {}
+    agent_by_application = {}
+    from core.config import get_settings
+    if get_settings().discovery_enabled:
+        from services.discovery_store import latest
+        followup_preferences=latest(user_id)['preferences'] or {}
+        questions_by_application={r['application_id']:r for r in database.table('application_agent_questions').select('application_id,state,questions').eq('user_id',user_id).execute().data}
+        from services.agent_applications import attempts
+        agent_by_application = {a['application_id']: a for a in attempts(user_id) if a.get('application_id')}
+    draft_by_application={}
+    if get_settings().discovery_enabled:
+        from services.automation import activity
+        draft_by_application={d['application_id']:d for d in activity(user_id)['drafts'] if d.get('application_id') and d['state']!='discarded'}
+    from services.application_questions import followup_label
+    return [row | {"found_followup":followup_label(row,followup_preferences,agent_by_application.get(row["id"])),"agent_questions": {"state":questions_by_application[row["id"]]["state"],"pending":sum(bool(q.get("required") and not q.get("answer")) for q in questions_by_application[row["id"]]["questions"])} if row["id"] in questions_by_application else None,"tailored_resume":draft_by_application.get(row['id']),"agent_submission": agent_by_application.get(row['id']), "resume_name": names.get(row["selected_resume_id"]),
                    "match_score": scores.get((row["id"],row["selected_resume_id"]))} for row in rows]
 
 
@@ -66,7 +81,12 @@ def get_application(
     if not result.data:
         raise not_found("Application")
 
-    return result.data[0]
+    row=result.data[0]
+    from core.config import get_settings
+    if get_settings().discovery_enabled:
+        from services.automation import activity
+        row=row|{'agent_questions_enabled':True,'tailored_resume':next((d for d in activity(user_id)['drafts'] if d.get('application_id')==str(application_id) and d['state']!='discarded'),None)}
+    return row
 
 
 @router.patch("/{application_id}")
@@ -158,7 +178,7 @@ def get_application_timeline(
     if not application.data:
         raise not_found("Application")
 
-    return (
+    events = (
         database.table("application_events")
         .select("*")
         .eq("application_id", str(application_id))
@@ -167,6 +187,13 @@ def get_application_timeline(
         .execute()
         .data
     )
+    from core.config import get_settings
+    if get_settings().discovery_enabled:
+        from services.agent_applications import attempts
+        events += [{'id':a['id'],'application_id':str(application_id),'event_type':'agent_submission',
+                    'source':'agent','from_status':None,'to_status':None,'note':a['note'],
+                    'happened_at':a['updated_at']} for a in attempts(user_id) if a.get('application_id')==str(application_id)]
+    return sorted(events,key=lambda event:event['happened_at'])
 
 @router.post('/{application_id}/receipt-correction')
 def correct_receipt(application_id:UUID,request:Request,user_id:CurrentUser):

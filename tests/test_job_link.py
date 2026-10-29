@@ -103,6 +103,35 @@ class JobLinkTests(unittest.TestCase):
             with self.assertRaises(AIError): job_link.parse_posting('<main>'+('Sign in to LinkedIn. '*20)+'</main>', 'https://www.linkedin.com/jobs/view/123/')
             ai.assert_not_called()
 
+    def test_cleaning_removes_clutter_preserving_later_requirements(self):
+        text = 'Apply now\nAbout Example\nWe are an amazing company.\nAbout the Role\n'+DESCRIPTION+'\nDisclaimer\nLegal boilerplate.\nQualifications\nPython and SQL required.\nBenefits\nHealth insurance.\nSalary\nINR 10–20 lakh\nShare this job'
+        result = job_link.clean_description(text, 'Example')
+        self.assertNotIn('amazing company', result)
+        self.assertNotIn('Legal boilerplate', result)
+        self.assertNotIn('Apply now', result)
+        for required in [DESCRIPTION, 'Python and SQL required.', 'Health insurance.', 'INR 10–20 lakh']:
+            self.assertIn(required, result)
+
+    def test_cleaning_keeps_unrecognized_text_and_meaningful_duplicates(self):
+        text = 'Build privacy models for fraud detection.\nResponsibilities\nPython\nPreferred Skills\nPython'
+        self.assertEqual(job_link.clean_description(text), text)
+        self.assertEqual(job_link.clean_description(job_link.clean_description(text)), text)
+
+    def test_unheaded_company_intro_and_privacy_leave_compensation(self):
+        text = 'Example is a media intelligence company.\nABOUT THE ROLE\n'+DESCRIPTION+'\nWHO ARE YOU\nExpert Python skills.\n$150,000 - $185,000 a year\nExample is an equal opportunity employer.\nExample may collect personal information directly from you, as a job applicant.\n'+r'\n'+'\n--------'
+        result = job_link.clean_description(text, 'Example')
+        self.assertTrue(result.startswith('ABOUT THE ROLE'))
+        self.assertIn('$150,000 - $185,000 a year', result)
+        self.assertIn('Expert Python skills.', result)
+        self.assertNotIn('personal information', result)
+        self.assertNotIn('--------', result)
+        self.assertNotIn(r'\n', result)
+
+    def test_greenhouse_description_section_excludes_page_chrome(self):
+        html = '<head><title>Job Application for Scientist at Example</title></head><main>Recommended jobs<div class="job__description body">'+DESCRIPTION+'</div>Get job alerts</main>'
+        result = job_link.parse_posting(html, 'https://job-boards.greenhouse.io/example/jobs/123')
+        self.assertEqual(result['job_description'], DESCRIPTION)
+
     def test_private_and_mixed_dns_are_rejected(self):
         for ip in ['127.0.0.1','10.0.0.1','169.254.169.254','::1','::ffff:127.0.0.1']:
             with self.subTest(ip=ip), patch.object(job_link.socket,'getaddrinfo',return_value=[(2,1,6,'',(ip,443))]):

@@ -12,6 +12,10 @@ async def lifespan(app):
     thread = Thread(target=scheduler_loop, args=(stop,), daemon=True, name="mail-sync")
     if get_settings().mail_scheduler_enabled:
         thread.start()
+    from services.discovery_store import scheduler_loop as discovery_loop
+    discovery_thread = Thread(target=discovery_loop, args=(stop,), daemon=True, name='local-discovery')
+    if get_settings().discovery_enabled:
+        discovery_thread.start()
     yield
     stop.set()
 
@@ -58,6 +62,8 @@ def create_app() -> FastAPI:
         }.get(code, (502, "Unable to complete the database operation. Please retry."))
         return JSONResponse(status_code=status_code, content={"detail": message})
 
+    from routers import discovery
+    app.include_router(discovery.router, prefix='/api/v1')
     app.include_router(mail_sync.router, prefix="/api/v1")
     app.include_router(profile.router, prefix="/api/v1")
     app.include_router(analysis.router, prefix="/api/v1")

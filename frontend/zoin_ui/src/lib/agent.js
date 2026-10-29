@@ -1,0 +1,2 @@
+export const agentDefaults={locations:['India'],worldwide_remote:true,tracks:[],matching_threshold:80,automation_level:'recommend',max_required_years:null,include_senior_roles:false,daily_enabled:false,frequency_days:1,daily_application_limit:5,paused:false,real_applications_enabled:false,found_followup_enabled:false,found_followup_hours:24}
+export const agentModes={recommend:'1 · Find and recommend',existing_resume:'2 · Apply with a qualifying saved résumé',review_resume:'3 · Tailor a résumé, approve, then apply',tailored_resume:'4 · Tailor, reassess & apply automatically'}

@@ -136,6 +136,9 @@ class PageText(HTMLParser):
 
 class LinkedInText(HTMLParser):
     """Capture published job sections, excluding recommendations and sign-in UI."""
+    selectors = {'topcard__title': 'title', 'topcard__org-name-link': 'company',
+                 'topcard__flavor--bullet': 'location', 'show-more-less-html__markup': 'description'}
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.active = {}
@@ -146,9 +149,7 @@ class LinkedInText(HTMLParser):
             if value[0] == tag:
                 value[1] += 1
         classes = (dict(attrs).get('class') or '').split()
-        selectors = {'topcard__title': 'title', 'topcard__org-name-link': 'company',
-                     'topcard__flavor--bullet': 'location', 'show-more-less-html__markup': 'description'}
-        for cls, key in selectors.items():
+        for cls, key in self.selectors.items():
             if cls in classes and key not in self.active and key not in self.values:
                 self.active[key] = [tag, 1, []]
         if tag in ('p', 'div', 'li', 'br'):
@@ -165,6 +166,40 @@ class LinkedInText(HTMLParser):
 
     def handle_data(self, data):
         for value in self.active.values(): value[2].append(data)
+
+
+
+class GreenhouseText(LinkedInText):
+    selectors = {'job__description': 'description'}
+
+
+def clean_description(text, company=None):
+    """Conservative linear-time cleanup: no model call and no sentence rewriting."""
+    core = re.compile(r"(?:about (?:the |this )?role|role (?:details|overview|summary)|job (?:purpose|summary)|(?:key |primary |secondary )?responsibilities|requirements|qualifications|(?:required |preferred |minimum )?(?:skills|qualifications|experience)|what (?:you(?:’|')?ll (?:do|bring|need)|will you do(?: at .+)?|we(?:’|')?re looking for|we are looking for)|who (?:you are|are you)|what makes you .+|(?:key )?success metrics|education|experience|benefits|compensation|salary|what we offer|even better if you have|our stack)", re.I)
+    clutter = re.compile(r"(?:about (?:us|the company)|(?:abc )?company (?:info|information)|what makes an ideal abc citizen|join us|(?:our )?(?:core )?values|our culture|life at .+|disclaimer|important|equal (?:employment )?opportunit(?:y|ies)(?: employer)?|privacy(?: notice| policy)?|recruitment (?:fraud|privacy)(?: notice)?|refer the links to know more.*|stay updated with life at.*)", re.I)
+    ui = re.compile(r"(?:apply(?: now| for this job)?|back to jobs|view all jobs|share(?: this job)?|show (?:more|less)|save(?: job)?|sign in|create (?:a |an )?(?:job alert|account)|powered by (?:greenhouse|lever)|accept all cookies|manage cookies|cookie (?:policy|preferences))", re.I)
+    lines = [' '.join(line.split()) for line in text.splitlines() if line.strip()]
+    # Discard unheaded company introductions only when a clear role section follows.
+    first_core = next((i for i, line in enumerate(lines) if core.fullmatch(line.strip(' :–—-#*?'))), None)
+    if first_core and company and company.casefold() in lines[0].casefold():
+        preamble = '\n'.join(lines[:first_core])
+        if not re.search(r'\b(?:experience|salary|qualification|requirement|benefit)\b|[$₹€£]', preamble, re.I):
+            lines = lines[first_core:]
+    result = []
+    skipping = False
+    for line in lines:
+        heading = line.strip(' :–—-#*?').strip()
+        if core.fullmatch(heading):
+            skipping = False
+        elif clutter.fullmatch(heading) or (isinstance(company, str) and heading.casefold() == 'about ' + company.casefold()):
+            skipping = True
+            continue
+        if skipping or ui.fullmatch(heading) or re.fullmatch(r'[-_–—=]{4,}', line) or line in (r'\n', r'\t'):
+            continue
+        if re.match(r'.{0,80}\bis an equal opportunity employer\b|.{0,80}\bmay collect personal information directly from you\b|(?:for further details,? )?(?:please )?(?:see|read) .{0,80}applicant privacy', line, re.I):
+            continue
+        result.append(line)
+    return '\n'.join(result)
 
 
 def clean_html(value):
@@ -216,7 +251,14 @@ def parse_posting(html, url):
                     'jobLocation': {'address': {'addressLocality': values.get('location')}}}
     description_value = item.get('description') or ''
     description = clean_html(unescape(description_value)) if item and isinstance(description_value, str) else clean_html(html)
-    hostname = urlsplit(url).hostname or ''
+    if not item and hostname.endswith('.greenhouse.io'):
+        section = GreenhouseText()
+        section.feed(html)
+        description = section.values.get('description') or description
+    original_description = description
+    employer = item.get('hiringOrganization') or {}
+    employer = employer.get('name') if isinstance(employer, dict) else employer
+    description = clean_description(description, employer)
     if (hostname == 'linkedin.com' or hostname.endswith('.linkedin.com')) and not item:
         raise AIError('LinkedIn did not expose this job publicly. Paste the description or use the employer’s original posting link.', 422)
     if len(description) < 80:
@@ -257,6 +299,8 @@ def parse_posting(html, url):
         if job_match:
             fields['job_id'] = fields['job_id'] or job_match[1]
     warnings = ['Review all imported details before saving.']
+    if description != original_description[:18000]:
+        warnings.append('Page controls and recognized company/legal boilerplate were removed. Review the description for completeness.')
     if not fields['job_title'] or not fields['company']:
         # The existing evidence-checked extractor only sees page text, never keys or browser cookies.
         extracted = extract_job(description)

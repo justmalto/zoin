@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     mail_worker_key: SecretStr = SecretStr("")
     mail_scheduler_enabled: bool = True
 
+    discovery_mock_origin: str = ""
+    discovery_enabled: bool = False
+    discovery_db_path: str = str(Path(__file__).resolve().parents[2] / '.local' / 'discovery.sqlite3')
+
     allowed_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 
