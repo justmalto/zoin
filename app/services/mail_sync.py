@@ -71,6 +71,12 @@ def log_match(job, match):
 
 
 def sync_account(user_id, trigger='manual', application_id=None, claim=None):
+    from services.ai_context import ai_scope
+    with ai_scope(user_id,background=trigger!='manual'):
+        return _sync_account(user_id,trigger,application_id,claim)
+
+
+def _sync_account(user_id, trigger='manual', application_id=None, claim=None):
     try:
         claim = claim or worker('claim', user_id=user_id, trigger=trigger, application_id=application_id)
     except Exception:

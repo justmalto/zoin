@@ -116,6 +116,8 @@ def erase(owner):
         db.execute('delete from discovery_accounts where owner=?', (owner,))
         db.execute('delete from discovery_runs where owner=?', (owner,))
         db.execute('delete from discovery_ai_cache where owner=?', (owner,))
+    from services.ai_budget import Budget
+    Budget(get_settings()).forget(owner)
 
 
 def process_one(runner=None):
@@ -146,13 +148,16 @@ def process_one(runner=None):
                 from services.job_discovery import profile_resumes
                 resumes=open_snapshot(snapshot['_sealed_resumes']) if snapshot.get('_sealed_resumes') else []
                 cache=lambda action,key,value:ai_cache(row['owner'],action,key,value)
-                profiles=profile_resumes(resumes,cache=cache)
+                from services.ai_context import ai_scope
+                with ai_scope(row['owner'],background=True):
+                    profiles=profile_resumes(resumes,cache=cache)
                 with database() as db:
                     current=db.execute('select snapshot from discovery_accounts where owner=?',(row['owner'],)).fetchone()
                     if current:
                         fresh=json.loads(current['snapshot']);fresh['profiles']=profiles
                         db.execute('update discovery_accounts set snapshot=? where owner=?',(json.dumps(fresh),row['owner']))
-                result=discover(profiles,snapshot['preferences'],excluded,resumes=resumes,cache=cache)
+                with ai_scope(row['owner'],background=True):
+                    result=discover(profiles,snapshot['preferences'],excluded,resumes=resumes,cache=cache)
             with database() as db:
                 db.execute("update discovery_runs set status='complete',result=?,finished_at=? where id=?", (json.dumps(result), now().isoformat(), row['id']))
         except AIError as error:

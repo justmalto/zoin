@@ -146,6 +146,9 @@ def submit_draft(owner,identifier,client,applicant,adapter,*,approve=False):
     return result
 
 
+from services.ai_context import owned_work
+
+@owned_work(background=True)
 def process_owner(owner,client,applicant,adapter):
     current=store.latest(owner);prefs=current['preferences'] or {};run=current['run']
     if prefs.get('paused') or prefs.get('automation_level','recommend')=='recommend':return

@@ -1,6 +1,7 @@
 import json
 import sys
 import unittest
+import tempfile
 from pathlib import Path
 from unittest.mock import patch, Mock
 
@@ -28,8 +29,9 @@ def assessment():
 
 class AIBackendTests(unittest.TestCase):
     def setUp(self):
-        self.settings = get_settings().model_copy(update={'groq_api_key': SecretStr('test-key-only')})
-        groq_client._reservations.clear()
+        directory=tempfile.TemporaryDirectory(); self.addCleanup(directory.cleanup)
+        self.settings = get_settings().model_copy(update={'groq_api_key': SecretStr('test-key-only'),
+            'ai_budget_db_path':str(Path(directory.name)/'usage.sqlite3')})
 
     def test_missing_key_fails_without_network(self):
         with patch.object(groq_client, 'get_settings', return_value=self.settings.model_copy(update={'groq_api_key': SecretStr('')})), patch.object(groq_client.httpx, 'post') as post:
@@ -59,18 +61,21 @@ class AIBackendTests(unittest.TestCase):
             self.assertNotIn('test-key', str(error.exception))
 
     def test_invalid_or_truncated_provider_output_rejected(self):
-        for reason, content in [('length','{}'), ('stop','[]'), ('stop','not json')]:
-            groq_client._reservations.clear()
+        for index,(reason, content) in enumerate([('length','{}'), ('stop','[]'), ('stop','not json')]):
+            settings=self.settings.model_copy(update={'ai_budget_db_path':self.settings.ai_budget_db_path+str(index)})
             response = httpx.Response(200, json={'choices':[{'finish_reason':reason,'message':{'content':content}}]}, request=httpx.Request('POST','https://api.groq.com'))
-            with patch.object(groq_client,'get_settings',return_value=self.settings),patch.object(groq_client.httpx,'post',return_value=response):
-                with self.assertRaises(AIError):groq_client.complete_json('system','text',JobExtraction)
+            with patch.object(groq_client,'get_settings',return_value=settings),patch.object(groq_client.httpx,'post',return_value=response):
+                with self.assertRaises(AIError) as failure:groq_client.complete_json('system','text',JobExtraction)
+                self.assertEqual(failure.exception.status_code,502)
 
     def test_budget_does_not_silently_overrun(self):
-        groq_client._reserve(6000,7500)
-        with self.assertRaises(AIError) as error:groq_client._reserve(2000,7500)
-        self.assertEqual(error.exception.status_code,429)
-        with self.assertRaises(AIError) as error:groq_client._reserve(8000,7500)
-        self.assertEqual(error.exception.status_code,413)
+        from services.ai_budget import Budget, BudgetBlocked
+        budget=Budget(self.settings)
+        budget.reserve('120b','a','test',6000)
+        with self.assertRaises(BudgetBlocked) as error:budget.reserve('120b','a','test',2000)
+        self.assertEqual(error.exception.code,'minute_tokens')
+        with self.assertRaises(BudgetBlocked) as error:budget.reserve('120b','a','test',8000)
+        self.assertEqual(error.exception.code,'request_too_large')
 
     def test_score_and_evidence(self):
         result = assessment()

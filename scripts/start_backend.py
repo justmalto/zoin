@@ -42,6 +42,14 @@ def main():
     except ValueError as exc:
         raise SystemExit(str(exc)) from None
     if os.environ.get('ZOIN_ENVIRONMENT') == 'production':
+        from services.groq_client import ALLOWED_MODELS
+        from services.ai_budget import Budget
+        if any(model not in ALLOWED_MODELS for model in (settings.groq_model,settings.groq_utility_model,settings.groq_resume_model)):
+            raise SystemExit('Configure supported GPT-OSS task models before starting production.')
+        try:
+            with Budget(settings).database() as db:db.execute('select 1')
+        except Exception:
+            raise SystemExit('AI budget storage is unavailable. Check the persistent data mount and permissions.') from None
         # Validate migration/worker capability before reporting this deployment healthy.
         from services.mail_sync import worker
         try:

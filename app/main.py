@@ -46,10 +46,16 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
+    from services.ai_context import request_scope
+    @app.middleware('http')
+    async def ai_request_identity(request: Request, call_next):
+        with request_scope(request):
+            return await call_next(request)
+
     @app.exception_handler(AIError)
     async def handle_ai_error(request: Request, exc: AIError):
         headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
-        return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)}, headers=headers)
+        return JSONResponse(status_code=exc.status_code, content={"detail": str(exc),"code":exc.code}, headers=headers)
 
     @app.exception_handler(APIError)
     async def handle_database_error(request: Request, exc: APIError):
@@ -64,6 +70,8 @@ def create_app() -> FastAPI:
 
     from routers import discovery
     app.include_router(discovery.router, prefix='/api/v1')
+    from routers import ai_usage
+    app.include_router(ai_usage.router, prefix='/api/v1')
     app.include_router(mail_sync.router, prefix="/api/v1")
     app.include_router(profile.router, prefix="/api/v1")
     app.include_router(analysis.router, prefix="/api/v1")
