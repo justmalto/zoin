@@ -6,7 +6,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function api(path, { body, timeoutMs = 120000, responseType, ...options } = {}) {
+export async function api(path, { body, timeoutMs = 120000, ...options } = {}) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new ApiError('Please sign in again.', 401)
   const headers = { Authorization: `Bearer ${session.access_token}`, ...options.headers }
@@ -23,7 +23,6 @@ export async function api(path, { body, timeoutMs = 120000, responseType, ...opt
     if (error.name === 'AbortError') throw error
     throw new ApiError('Unable to reach Zoin. Check your connection and retry.', 0)
   }
-  if (response.ok && responseType === 'blob') return response.blob()
   const data = response.status === 204 ? null : await response.json().catch(() => null)
   if (response.ok && response.status !== 204 && data === null) throw new ApiError('Zoin returned an invalid response. Check the backend URL and retry.', 502)
   if (!response.ok) {

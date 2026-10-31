@@ -11,11 +11,10 @@ An API request cannot select your billing plan: the account itself must remain F
 
 The current published free plan lists 30 requests/minute, 1,000/day,
 8,000 tokens/minute and 200,000/day for these models; account-specific limits can differ.
-The app uses a persistent SQLite ledger with conservative 7,500-token/minute reservations,
-rolling daily model/account/background budgets, actual usage reconciliation and provider cooldowns.
-It rejects oversized prompts and returns 429 with Retry-After when busy. The ledger coordinates
-processes sharing its disk; other hosts/apps can still exhaust the shared Groq organization quota.
-There is no retry loop that silently spends more quota.
+The app uses a conservative, process-local rolling 7,500-token estimate. It rejects
+oversized prompts, returns 429 with Retry-After when busy, and also honors provider 429s.
+This is not a distributed quota manager; other processes/apps can exhaust the shared
+Groq organization quota. There is no retry loop that silently spends more quota.
 
 References:
 - https://console.groq.com/docs/structured-outputs
@@ -167,15 +166,3 @@ Verification: 67 backend tests and 33 frontend tests, lint and build passed loca
 PeopleStrong `/job/detail/{code}` links now use the same anonymous JSON endpoint as the public career page. The adapter validates the returned job code and open status, imports the published title, employer hierarchy, location and description, and retains the original posting URL. It uses the bounded, DNS-pinned fetcher with JSON content-type validation and never needs sign-in cookies. Unsupported JavaScript sites still require manual description entry. Live ABG111940 import and 70 backend tests passed locally; production is unchanged.
 
 LinkedIn selected-job search URLs (`currentJobId`) and direct slug URLs normalize to `/jobs/view/{id}/` without tracking parameters. The importer reads public JSON-LD or explicit public job title/company/description sections; it does not use session cookies or bypass login challenges. Entity-encoded descriptions and nullable HTML attributes are supported. Public access can vary by posting and server location. Four live providers were verified locally (LinkedIn, PeopleStrong, Greenhouse, Lever); JavaScript-only Duolingo remains manual-paste fallback.
-
-Imported descriptions are cleaned synchronously before the API response: explicit description containers are preferred and recognized UI/company/legal boilerplate is removed without AI. Later recognized role/qualification/benefit sections resume after excluded sections. Unknown text is retained conservatively; review remains necessary for unfamiliar site layouts. No additional network latency or model quota is required for cleaning.
-
-
-### Receipt reconciliation
-Explicit identity-matched application receipts can now be confirmed without a Groq call. Role-less receipts are accepted only when the worker supplies exactly one submitted tracked job for that owner/employer within seven days of the target submission, the sender exactly matches the first-party posting domain, and a valid email Date falls from 15 minutes before through seven days after submission. Shared ATS domains, ambiguous jobs, missing dates and explicit conflicting identities cannot use that fallback. Other messages retain the Groq evidence workflow. This is tracked-job disambiguation, not cryptographic sender authentication.
-
-The mail worker may revisit an existing unchanged message when new verified evidence qualifies it as a receipt. The original log row is updated in place; changed/ignored receipts and user corrections stay protected, and duplicate events/counters are prevented. Apply both receipt_reconciliation migrations before the backend update. Verification: 175 backend tests, including eight receipt regressions; rollback-only database tests cover capability/owner isolation, ambiguity, reconciliation, idempotency and corrections.
-
-
-### Persistent budgets and task routing (local implementation)
-Résumé drafting and utility calls now default to GPT-OSS 20B; matching and factual verification stay on 120B. See [AI budget design, configuration and verification](ai-budget.md) for per-model/account limits, rolling windows, provider cooldowns, private result caching and the authenticated usage endpoint. These changes have not yet been deployed to production.

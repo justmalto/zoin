@@ -45,9 +45,7 @@ def preview_resume(user_id:CurrentUser, file:UploadFile=File(...), job_descripti
         _,text=read_resume(file)
     finally:
         file.file.close()
-    from services.ai_context import temporary_input
-    with temporary_input():
-        return match_resume(job_description,text) | {'temporary':True,'resume_file_name':file.filename}
+    return match_resume(job_description,text) | {'temporary':True,'resume_file_name':file.filename}
 
 
 @router.post('/applications/{application_id}/mail-search')

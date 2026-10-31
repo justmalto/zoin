@@ -8,7 +8,6 @@ import Home from './pages/home'
 import Login from './pages/login'
 import Register from './pages/register'
 import CheckEmail from './pages/checkEmail'
-import Automation from './pages/automation'
 import Profile from './pages/profile'
 import JobDetails from './pages/jobDetails'
 
@@ -20,7 +19,7 @@ function Shell({ theme, toggleTheme }) {
     <Routes location={background || location}>
       <Route path="/" element={<Navigate to={user ? '/home' : '/login'} replace />} />
       <Route path="/check-email" element={<CheckEmail />} /><Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} />
-      <Route path="/automation" element={protect(<Automation />)} /><Route path="/home" element={protect(<Home />)} /><Route path="/profile" element={protect(<Profile />)} />
+      <Route path="/home" element={protect(<Home />)} /><Route path="/profile" element={protect(<Profile />)} />
       <Route path="/jobs/new" element={protect(<JobDetails />)} /><Route path="/jobs/:id" element={protect(<JobDetails />)} />
       <Route path="*" element={<main className="screen"><h1>Page not found</h1><Link to="/home">Go to applications</Link></main>} />
     </Routes>

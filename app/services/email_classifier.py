@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from schemas.ai import ApplicationMatchOutput, EmailClassificationOutput, MailMatches
-from services.groq_client import AIError, complete_json, cached_result
+from services.groq_client import AIError, complete_json
 from services.job_extractor import UNTRUSTED_RULE, require_quote
 
 
@@ -51,7 +51,6 @@ def find_matching_application(email_sender: str, email_subject: str, email_body:
     return ApplicationMatch(**result.model_dump())
 
 
-@cached_result('mail_match')
 def match_mail_for_job(application: dict, messages: list[dict]) -> list[dict]:
     if not messages:
         return []

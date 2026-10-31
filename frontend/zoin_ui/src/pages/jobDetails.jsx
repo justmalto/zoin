@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, uploadResume } from '../lib/api'
 import { useResource } from '../lib/useResource'
-import JobQuestions from '../components/JobQuestions'
 import ResumeDownload from '../components/ResumeDownload'
 import JobMailSync from '../components/JobMailSync'
 import { labels, transitions, dateLabel } from '../lib/status'
@@ -181,7 +180,6 @@ function JobForm({ job, modal, onClose }) {
       <label>Submission date (optional)<input type="date" name="submitted_date" value={draft.submitted_date} onChange={change} readOnly={readOnly} disabled={!!busy} /></label>
       <label>Job ID<input name="job_id" value={draft.job_id} onChange={change} readOnly={readOnly} disabled={!!busy} maxLength={300} placeholder="Optional" /></label>
       {!job && <p className="wide small">New jobs start as Found. Applied is set automatically only when a matching application-received email is confirmed during Gmail search.</p>}
-      {job?.tailored_resume&&<section className="wide resume"><h2>Attached tailored résumé</h2><p>{job.tailored_resume.file_name} · {job.tailored_resume.state.replaceAll('_',' ')}</p><a href="/automation">Review attached document in automation activity →</a><p className="small">The agent uses this exact document for the submission; the saved résumé below is its source.</p></section>}
       <section className="wide resume"><div className="sectionhead"><h2>Resume Matching</h2><label className="upload-label">Upload Resume<input className="visually-hidden" type="file" accept=".pdf,.docx,.txt" disabled={!!busy} onChange={chooseFile} /></label></div>
         {resumes.error && <p role="alert">{resumes.error} <button type="button" onClick={resumes.reload}>Retry</button></p>}
         <label>Resume<select aria-label="Select resume" value={selectedResume} onChange={e => { setDraft(old => ({ ...old, selected_resume_id: e.target.value })); setAnalysis(null); setMatchFailure(null); setRetryAt(null) }} disabled={!!busy || readOnly}><option value="">No resume selected</option>{resumes.data?.map(r => <option key={r.id} value={r.id}>{r.file_name}{r.is_active ? ' · Default' : ''}</option>)}</select></label>
@@ -201,7 +199,6 @@ function JobForm({ job, modal, onClose }) {
       </section>
       {job && !editing && <>
         <section className="wide panel"><h2>Application Status</h2><div className="status-controls"><span className={`status ${currentJob.status}`}>{labels[currentJob.status]}</span>{currentJob.receipt_confirmed_at && <button type="button" disabled={!!busy} onClick={correctReceipt}>Correct mistaken email confirmation</button>}{transitions[currentJob.status]?.length ? <><select aria-label="Next status" value={nextStatus} onChange={e => setNextStatus(e.target.value)} disabled={!!busy}><option value="">Choose next status</option>{transitions[currentJob.status].map(s => <option key={s} value={s}>{labels[s]}</option>)}</select><button type="button" disabled={!nextStatus || !!busy} onClick={() => transition(nextStatus)}>Update</button></> : <p className="small muted">No further status changes.</p>}</div></section>
-        {job?.agent_questions_enabled && <JobQuestions job={currentJob} />}
         <JobMailSync job={currentJob} onUpdate={setCurrentJob} onTransition={transition} onSynced={timeline.reload} />
         <section className="wide panel"><h2>Timeline</h2>{timeline.error && <p role="alert">{timeline.error} <button type="button" onClick={timeline.reload}>Retry</button></p>}{timeline.data?.map(event => <div key={event.id} className="timeline-row"><span>{labels[event.to_status] || event.event_type}</span><small>{dateLabel(event.happened_at)}</small>{event.note && <p>{event.note}</p>}</div>)}</section>
       </>}

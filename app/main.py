@@ -12,10 +12,6 @@ async def lifespan(app):
     thread = Thread(target=scheduler_loop, args=(stop,), daemon=True, name="mail-sync")
     if get_settings().mail_scheduler_enabled:
         thread.start()
-    from services.discovery_store import scheduler_loop as discovery_loop
-    discovery_thread = Thread(target=discovery_loop, args=(stop,), daemon=True, name='local-discovery')
-    if get_settings().discovery_enabled:
-        discovery_thread.start()
     yield
     stop.set()
 
@@ -46,16 +42,10 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
-    from services.ai_context import request_scope
-    @app.middleware('http')
-    async def ai_request_identity(request: Request, call_next):
-        with request_scope(request):
-            return await call_next(request)
-
     @app.exception_handler(AIError)
     async def handle_ai_error(request: Request, exc: AIError):
         headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
-        return JSONResponse(status_code=exc.status_code, content={"detail": str(exc),"code":exc.code}, headers=headers)
+        return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)}, headers=headers)
 
     @app.exception_handler(APIError)
     async def handle_database_error(request: Request, exc: APIError):
@@ -68,10 +58,6 @@ def create_app() -> FastAPI:
         }.get(code, (502, "Unable to complete the database operation. Please retry."))
         return JSONResponse(status_code=status_code, content={"detail": message})
 
-    from routers import discovery
-    app.include_router(discovery.router, prefix='/api/v1')
-    from routers import ai_usage
-    app.include_router(ai_usage.router, prefix='/api/v1')
     app.include_router(mail_sync.router, prefix="/api/v1")
     app.include_router(profile.router, prefix="/api/v1")
     app.include_router(analysis.router, prefix="/api/v1")

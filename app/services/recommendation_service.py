@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from core.config import get_settings
 from schemas.ai import ResumeAssessment
 from services.experience import check_experience
-from services.groq_client import AIError, complete_json, cached_result
+from services.groq_client import AIError, complete_json
 from services.job_extractor import UNTRUSTED_RULE
 
 WEIGHTS = {"ml_modeling": 20, "data_preparation": 15, "validation": 15, "mlops_api_cloud": 20,
@@ -16,7 +16,6 @@ WEIGHTS = {"ml_modeling": 20, "data_preparation": 15, "validation": 15, "mlops_a
 FACTORS = {"met": 1, "partial": .5, "not_evidenced": 0, "not_required": 0}
 
 
-@cached_result('resume_match')
 def match_resume(job_description: str, resume_text: str) -> dict:
     if not 20 <= len(job_description) <= 18000 or not 20 <= len(resume_text) <= 18000:
         raise AIError("Job and resume text must each contain 20 to 18000 characters", 422)

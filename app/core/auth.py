@@ -32,7 +32,6 @@ def require_user(request: Request) -> str:
             detail="Invalid or expired Supabase access token",
         )
 
-    request.state.verified_user = user
     request.state.access_token = access_token
     return str(user.id)
 
